@@ -1,0 +1,26 @@
+{
+	"appId": "com.ccdesignstudio.mtv2026",
+	"appName": "MTV Hesaplama",
+	"webDir": "www",
+	"plugins": {
+		"StatusBar": {
+			"style": "LIGHT",
+			"overlaysWebView": false,
+			"backgroundColor": "#000000"
+		},
+		"SplashScreen": {
+			"launchShowDuration": 3000,
+			"launchAutoHide": false,
+			"backgroundColor": "#000000",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_CROP",
+			"showSpinner": false,
+			"splashFullScreen": true,
+			"splashImmersive": true
+		},
+		"NavigationBar": {
+			"backgroundColor": "#000000",
+			"androidNavigationBarColor": "#000000"
+		}
+	}
+}

@@ -1,0 +1,349 @@
+package com.ccdesignstudio.mtv2026;
+
+import com.getcapacitor.BridgeActivity;
+import android.os.Bundle;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+
+import android.view.Window;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import android.content.res.Configuration;
+import android.webkit.WebView;
+import android.util.Log;
+
+// BILLING
+import com.android.billingclient.api.*;
+import java.util.Collections;
+import java.util.List;
+
+// ADMOB
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.AdError;
+
+public class MainActivity extends BridgeActivity {
+    
+    // --- CONFIG ---
+    private static final String TAG = "MTV2026_Native";
+    private final String PRODUCT_ID = "reklam_kaldir";
+    
+    // TEST IDS (Gerçek kimliklerle değiştirilmelidir)
+    private final String BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111";
+    private final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712";
+
+    // --- BILLING OBJECTS ---
+    private BillingClient billingClient;
+    private boolean isPremium = false;
+
+    // --- ADMOB OBJECTS ---
+    private AdView adView;
+    private InterstitialAd mInterstitialAd;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // 1. SETUP WEBVIEW & JS INTERFACE IMMEDIATELY (KRİTİK: En önce bridge kurulur)
+        setupWebView();
+
+        // 2. SETUP WINDOW INSETS (StatusBar/NavBar beyaz ikonlar)
+        setupWindowInsets();
+
+        // 3. INITIALIZE BILLING
+        setupBilling();
+
+        // 4. INITIALIZE ADS
+        initAds();
+    }
+    
+    private void setupWebView() {
+        View webViewView = getBridge().getWebView();
+        if (webViewView instanceof WebView) {
+            WebView webView = (WebView) webViewView;
+            
+            // 1. KÖPRÜYÜ ANINDA EKLE
+            webView.addJavascriptInterface(new WebAppInterface(this), "AndroidTheme");
+
+            // WebView Ayarları
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                webView.getSettings().setForceDark(android.webkit.WebSettings.FORCE_DARK_OFF);
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                webView.getSettings().setAlgorithmicDarkeningAllowed(false);
+            }
+            webView.setBackgroundColor(Color.parseColor("#0a192f"));
+            
+            // WebView tam ekran olmalı
+            webView.setPadding(0, 0, 0, 0);
+            
+            webView.setOnLongClickListener(v -> true);
+            webView.setLongClickable(false);
+            webView.setHapticFeedbackEnabled(false);
+        }
+    }
+
+    private void setupWindowInsets() {
+        Window window = getWindow();
+        View decorView = window.getDecorView();
+        
+        // Arka plan tutarlılığı
+        window.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#0a192f")));
+        
+        // StatusBar: Saf Siyah
+        window.setStatusBarColor(Color.BLACK);
+        // NavigationBar: Saf Siyah
+        window.setNavigationBarColor(Color.BLACK);
+        
+        // KESİN ÇÖZÜM: BEYAZ İKONLAR (false = siyah barda beyaz ikonlar)
+        WindowCompat.setDecorFitsSystemWindows(window, false);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, decorView);
+        if (controller != null) {
+            controller.setAppearanceLightStatusBars(false); 
+            controller.setAppearanceLightNavigationBars(false);
+        }
+
+        // AGRESİF ESKİ SÜRÜM DESTEĞİ
+        int flags = decorView.getSystemUiVisibility();
+        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        decorView.setSystemUiVisibility(flags);
+    }
+
+    // --- BILLING LOGIC ---
+    private void setupBilling() {
+        billingClient = BillingClient.newBuilder(this)
+                .setListener(purchaseUpdateListener)
+                .enablePendingPurchases()
+                .build();
+        startBillingConnection();
+    }
+
+    private void startBillingConnection() {
+        billingClient.startConnection(new BillingClientStateListener() {
+            @Override
+            public void onBillingSetupFinished(BillingResult billingResult) {
+                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    checkPremiumStatus();
+                } else {
+                    initAds(); 
+                }
+            }
+            @Override
+            public void onBillingServiceDisconnected() {
+                initAds();
+            }
+        });
+    }
+
+    private void checkPremiumStatus() {
+        if (billingClient == null) return;
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(),
+            (billingResult, purchases) -> {
+                boolean found = false;
+                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    for (Purchase purchase : purchases) {
+                        if (purchase.getProducts().contains(PRODUCT_ID) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                setPremiumUser(found);
+                if (!found) initAds();
+                else removeBanner();
+            }
+        );
+    }
+
+    private final PurchasesUpdatedListener purchaseUpdateListener = (billingResult, purchases) -> {
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+            for (Purchase purchase : purchases) handlePurchase(purchase);
+        } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
+            sendJsEvent("onPurchaseError", "İşlem iptal edildi.");
+        } else {
+            sendJsEvent("onPurchaseError", "Hata: " + billingResult.getResponseCode());
+        }
+    };
+
+    private void handlePurchase(Purchase purchase) {
+        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            if (!purchase.isAcknowledged()) {
+                AcknowledgePurchaseParams params = AcknowledgePurchaseParams.newBuilder()
+                        .setPurchaseToken(purchase.getPurchaseToken()).build();
+                billingClient.acknowledgePurchase(params, billingResult -> {
+                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        setPremiumUser(true);
+                        sendJsEvent("onPurchaseSuccess", "true");
+                    }
+                });
+            } else {
+                setPremiumUser(true);
+                sendJsEvent("onPurchaseSuccess", "true");
+            }
+        }
+    }
+
+    private void initiatePurchase() {
+        if (billingClient == null) {
+            sendJsEvent("onPurchaseError", "Ödeme sistemi başlatılamadı.");
+            return;
+        }
+        List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
+                QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(PRODUCT_ID)
+                        .setProductType(BillingClient.ProductType.INAPP).build());
+        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
+
+        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                ProductDetails productDetails = productDetailsList.get(0);
+                List<BillingFlowParams.ProductDetailsParams> flowParams = Collections.singletonList(
+                        BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(productDetails).build());
+                BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder().setProductDetailsParamsList(flowParams).build();
+                billingClient.launchBillingFlow(this, billingFlowParams);
+            } else {
+                sendJsEvent("onPurchaseError", "Ürün bilgisi alınamadı.");
+            }
+        });
+    }
+
+    private void setPremiumUser(boolean premium) {
+        this.isPremium = premium;
+    }
+
+    // --- ADMOB LOGIC (NATIVE OVERLAY) ---
+    private void initAds() {
+        if (isPremium) return;
+        runOnUiThread(() -> {
+            MobileAds.initialize(this, initializationStatus -> {
+                loadBanner();
+                loadInterstitial();
+            });
+        });
+    }
+
+    private void loadBanner() {
+        if (isPremium || adView != null) return;
+        runOnUiThread(() -> {
+            adView = new AdView(this);
+            adView.setAdSize(AdSize.BANNER);
+            adView.setAdUnitId(BANNER_AD_UNIT_ID);
+            adView.setBackgroundColor(Color.TRANSPARENT);
+
+            View webView = getBridge().getWebView();
+            ViewGroup parent = (ViewGroup) webView.getParent();
+            
+            if (parent != null) {
+                // WEBVIEW'I İTMEYEN OVERLAY TASARIMI (FrameLayout)
+                android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, 
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                params.gravity = android.view.Gravity.BOTTOM;
+                parent.addView(adView, params);
+            }
+
+            adView.loadAd(new AdRequest.Builder().build());
+        });
+    }
+    
+    private void removeBanner() {
+        runOnUiThread(() -> {
+            if (adView != null) {
+                ((ViewGroup) adView.getParent()).removeView(adView);
+                adView.destroy();
+                adView = null;
+            }
+        });
+    }
+
+    private void loadInterstitial() {
+         if (isPremium) return;
+         runOnUiThread(() -> {
+             InterstitialAd.load(this, INTERSTITIAL_AD_UNIT_ID, new AdRequest.Builder().build(),
+                 new InterstitialAdLoadCallback() {
+                     @Override
+                     public void onAdLoaded(@androidx.annotation.NonNull InterstitialAd interstitialAd) {
+                         mInterstitialAd = interstitialAd;
+                         mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback(){
+                            @Override
+                            public void onAdDismissedFullScreenContent() {
+                                mInterstitialAd = null;
+                                sendJsEvent("onAdDismissed", "true");
+                                loadInterstitial();
+                            }
+                            @Override
+                            public void onAdFailedToShowFullScreenContent(AdError adError) {
+                                mInterstitialAd = null;
+                                sendJsEvent("onAdDismissed", "true");
+                                loadInterstitial();
+                            }
+                        });
+                     }
+                     @Override
+                     public void onAdFailedToLoad(@androidx.annotation.NonNull LoadAdError loadAdError) {
+                         mInterstitialAd = null;
+                     }
+                 });
+         });
+    }
+
+    private void showInterstitial() {
+        if (isPremium) {
+            sendJsEvent("onAdDismissed", "true");
+            return;
+        }
+        runOnUiThread(() -> {
+            if (mInterstitialAd != null) mInterstitialAd.show(MainActivity.this);
+            else {
+                sendJsEvent("onAdDismissed", "true");
+                loadInterstitial();
+            }
+        });
+    }
+
+    // --- JS BRIDGE ---
+    private void sendJsEvent(String functionName, String data) {
+        runOnUiThread(() -> {
+            View webViewView = getBridge().getWebView();
+            if (webViewView instanceof WebView) {
+                ((WebView) webViewView).evaluateJavascript("try { " + functionName + "('" + data + "'); } catch(e) {}", null);
+            }
+        });
+    }
+
+    public class WebAppInterface {
+        MainActivity mActivity;
+        WebAppInterface(MainActivity c) { mActivity = c; }
+        
+        @android.webkit.JavascriptInterface
+        public void removeAds() { mActivity.runOnUiThread(() -> mActivity.initiatePurchase()); }
+        
+        @android.webkit.JavascriptInterface
+        public void checkPremium() { mActivity.runOnUiThread(() -> mActivity.checkPremiumStatus()); }
+
+        @android.webkit.JavascriptInterface
+        public void showInterstitial() { mActivity.runOnUiThread(() -> mActivity.showInterstitial()); }
+        
+        @android.webkit.JavascriptInterface
+        public void setDarkMode(boolean active) {} // Gerekirse picker renkleri için
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (billingClient == null) setupBilling();
+        setupWindowInsets();
+    }
+}
