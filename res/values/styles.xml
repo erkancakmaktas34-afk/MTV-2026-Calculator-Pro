@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">?attr/colorPrimaryVariant</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowAnimationStyle">@style/AppTheme.NoAnimation</item>
+        <item name="android:alertDialogTheme">@style/AppTheme.DropdownNavy</item>
+        <item name="android:dropDownListViewStyle">@style/AppTheme.ListView.DropDown</item>
+    </style>
+
+    <!-- Activity geçiş animasyonlarını tamamen devre dışı bırakan stil -->
+    <style name="AppTheme.NoAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_anim</item>
+        <item name="android:taskOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseExitAnimation">@anim/no_anim</item>
+    </style>
+
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:windowBackground">@drawable/splash_screen_v2</item>
+        <item name="android:statusBarColor">#3aa4d3</item>
+        <item name="android:navigationBarColor">#3aa4d3</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- KÖK ÇÖZÜM: Splash görseli navigation bar üzerine taşmasın -->
+        <!-- FLAG_LAYOUT_NO_LIMITS splash temasında devreye girmeden önce -->
+        <!-- içerik alanını sistem barlarının dışında tutar -->
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <style name="AppTheme.DropdownNavy" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">#0a192f</item>
+        <item name="android:colorBackground">#0a192f</item>
+        <item name="colorSurface">#0a192f</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+    </style>
+
+    <style name="AppTheme.ListView.DropDown" parent="Widget.AppCompat.ListView.DropDown">
+        <item name="android:background">#0a192f</item>
+    </style>
+</resources>

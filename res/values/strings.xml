@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MTV Hesaplama</string>
+    <string name="title_activity_main">MTV Hesaplama</string>
+    <string name="package_name">com.ccdesignstudio.mtv2026</string>
+    <string name="custom_url_scheme">com.ccdesignstudio.mtv2026</string>
+</resources>

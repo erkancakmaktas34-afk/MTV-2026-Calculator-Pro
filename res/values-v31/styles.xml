@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ (API 31+) Specific Overrides -->
+    
+    <!-- Base application theme for Android 12+ -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <!-- CRITICAL: Disable force dark for WebView on Android 12+ -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">#0a192f</item>
+        <item name="android:colorBackground">#0a192f</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <!-- CRITICAL: Disable force dark for Android 12+ -->
+        <item name="android:forceDarkAllowed">false</item>
+        <!-- CRITICAL: Tüm Activity geçiş animasyonlarını tema seviyesinde kapat -->
+        <item name="android:windowAnimationStyle">@style/AppTheme.NoAnimation</item>
+    </style>
+
+    <!-- Activity geçiş animasyonlarını tamamen devre dışı bırakan stil -->
+    <style name="AppTheme.NoAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_anim</item>
+        <item name="android:taskOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseExitAnimation">@anim/no_anim</item>
+    </style>
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash_screen_v2</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>
